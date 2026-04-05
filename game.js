@@ -1,7 +1,7 @@
 const COLS = 8;
 const ROWS = 12;
 const COLORS = ['red', 'blue', 'green', 'yellow'];
-const BASE_SPEED = 20; // ms per pixel upwards
+const BASE_SPEED = 80; // Slower start (80ms per pixel, ~3 seconds per row)
 
 let gameState = {
     isGameActive: false,
@@ -36,6 +36,13 @@ const gameoverModal = document.getElementById('gameover-modal');
 const restartBtn = document.getElementById('restart-btn');
 const progressFill = document.getElementById('progress-fill');
 
+// Notification element
+const notification = document.createElement('div');
+notification.id = 'notification';
+notification.className = 'hidden';
+notification.innerHTML = '<span class="message"></span>';
+document.body.appendChild(notification);
+
 let audioCtx, shootOsc, boomOsc;
 const canvas = document.getElementById('particle-canvas');
 const ctx = canvas.getContext('2d');
@@ -50,7 +57,11 @@ function init() {
     gameContainer.addEventListener('mousemove', handleAim);
     gameContainer.addEventListener('touchmove', handleAim, {passive: false});
     gameContainer.addEventListener('mousedown', handleShoot);
-    gameContainer.addEventListener('touchstart', (e)=>{ handleAim(e); handleShoot(); }, {passive: false});
+    gameContainer.addEventListener('touchstart', (e)=>{ 
+        e.preventDefault(); // Prevents emulated mousedown on mobile (double fire bug fix)
+        handleAim(e); 
+        handleShoot(); 
+    }, {passive: false});
     
     requestAnimationFrame(gameLoop);
 }
@@ -284,17 +295,31 @@ function evaluateMatches(startR, startC) {
         checkFloatingBlocks();
         renderGridDOM();
         
-        // Progress to Checkpoint logic
+        // Progress to Checkpoint logic (Difficulty curve)
         const threshold = (gameState.foundCount + 1) * 1000;
         let progress = (gameState.depth % 1000) / 1000 * 100;
         if(gameState.depth >= threshold) {
             gameState.foundCount++;
-            gameState.shiftSpeedMult += 0.2; // Increase difficulty
+            gameState.shiftSpeedMult += 0.3; // Noticeable difficulty increase
             progress = 0;
             createFeverEffect();
+            showNotification(`深度 ${gameState.depth}m 突破！スピードアップ！`);
         }
         progressFill.style.width = `${progress}%`;
     }
+}
+
+function showNotification(msg) {
+    const msgEl = notification.querySelector('.message');
+    msgEl.innerText = msg;
+    notification.classList.remove('hidden');
+    notification.style.animation = 'none';
+    notification.offsetHeight; 
+    notification.style.animation = 'slideUp 0.3s ease-out forwards';
+    
+    setTimeout(() => {
+        notification.classList.add('hidden');
+    }, 2500);
 }
 
 function checkFloatingBlocks() {
