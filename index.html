@@ -16,6 +16,20 @@
         <div id="driller-space">
             <div id="soil-layer"></div>
             <div id="artifact-container"></div>
+            <!-- Canvas for sparks and dust -->
+            <canvas id="particle-canvas"></canvas>
+        </div>
+
+        <!-- Static Drill Unit -->
+        <div id="drill-container">
+            <div id="drill-unit">
+                <svg viewBox="0 0 100 100">
+                    <path d="M50,10 L90,90 L10,90 Z" fill="#757575" />
+                    <circle cx="50" cy="90" r="10" fill="#333" />
+                    <path d="M50,15 L80,85 L20,85 Z" fill="rgba(255,255,255,0.1)" />
+                </svg>
+            </div>
+            <div id="drill-sparks"></div>
         </div>
 
         <!-- HUD (Always Fixed) -->
@@ -33,9 +47,12 @@
                 </div>
             </div>
             
-            <button id="collection-btn">
-                <span id="found-count">0</span>/10 FOUND
-            </button>
+            <div class="hud-bottom">
+                <button id="collection-btn">
+                    <span id="found-count">0</span>/10 FOUND
+                </button>
+                <button id="upgrade-btn">UPGRADE DRILL</button>
+            </div>
         </div>
 
         <!-- Notification -->
@@ -44,14 +61,27 @@
         </div>
 
         <!-- Collection Modal -->
-        <div id="collection-modal" class="hidden">
+        <div id="collection-modal" class="modal hidden">
             <div class="modal-content glass">
                 <div class="modal-header">
                     <h2>Museum Collection</h2>
-                    <button id="close-modal">×</button>
+                    <button id="close-collection">×</button>
                 </div>
                 <div id="artifacts-grid">
                     <!-- Dynamic Items -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Upgrade Modal -->
+        <div id="upgrade-modal" class="modal hidden">
+            <div class="modal-content glass">
+                <div class="modal-header">
+                    <h2>Drill Workshop</h2>
+                    <button id="close-upgrade">×</button>
+                </div>
+                <div id="upgrades-list">
+                    <!-- Dynamic Upgrades -->
                 </div>
             </div>
         </div>
