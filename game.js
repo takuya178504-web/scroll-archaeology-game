@@ -19,16 +19,16 @@ let gameState = {
     maxUnlockedDepth: CHECKPOINT_INTERVAL,
     timeLeft: INITIAL_TIME,
     heat: 0,
-    points: 0,
     foundCount: 0,
     upgrades: { cooling: 0, power: 0 },
-    inventory: { cool: 0, sonar: 0 },
     isOverheated: false,
     isMuted: true,
     isGameActive: false,
+    isStunned: false,
     lastScrollTime: Date.now(),
     lastScrollPos: 0,
-    ranking: JSON.parse(localStorage.getItem('scrollArch_ranking')) || []
+    ranking: JSON.parse(localStorage.getItem('scrollArch_ranking')) || [],
+    moles: []
 };
 
 // Elements
@@ -88,7 +88,6 @@ function endGame() {
     clearInterval(gameTimer);
     stopDrillSound();
     
-    // Save Ranking
     const score = { depth: gameState.depth, artifacts: gameState.foundCount, date: new Date().toLocaleDateString() };
     gameState.ranking.push(score);
     gameState.ranking.sort((a, b) => b.depth - a.depth);
@@ -102,10 +101,12 @@ function endGame() {
 }
 
 function handleScroll() {
-    if (!gameState.isGameActive) return;
+    if (!gameState.isGameActive || gameState.isStunned) {
+        if (gameState.isStunned) drillerSpace.scrollTop = gameState.lastScrollPos;
+        return;
+    }
 
     const currentPos = drillerSpace.scrollTop;
-    // Checkpoint Lock
     if (currentPos > gameState.maxUnlockedDepth - 100) {
         drillerSpace.scrollTop = gameState.maxUnlockedDepth - 101;
         return;
@@ -135,16 +136,49 @@ function handleScroll() {
 
     if (gameState.heat >= 100) triggerOverheat();
 
+    // Mole Collision Detection
+    checkMoleCollision(currentPos);
+
     gameState.depth = Math.floor(currentPos);
     gameState.lastScrollTime = currentTime;
     gameState.lastScrollPos = currentPos;
     updateHUD();
 }
 
+function checkMoleCollision(depth) {
+    const drillY = depth + window.innerHeight * 0.8;
+    gameState.moles.forEach(mole => {
+        const distY = Math.abs(drillY - mole.y);
+        const drillX = 50; // Drill is centered at 50%
+        const distX = Math.abs(drillX - mole.x);
+        
+        if (distY < 60 && distX < 10 && !gameState.isStunned) {
+            triggerStun("🐹 モグラに突撃された！オーバーヒート！");
+        }
+    });
+}
+
+function triggerStun(msg) {
+    gameState.isStunned = true;
+    gameState.heat = 100; // Force overheat
+    showNotification(msg);
+    drillUnit.style.transition = "transform 0.1s";
+    let stunAnim = setInterval(() => {
+        drillUnit.style.transform = `rotate(${Math.random() * 20 - 10}deg)`;
+    }, 50);
+
+    setTimeout(() => {
+        clearInterval(stunAnim);
+        drillUnit.style.transform = "";
+        triggerOverheat();
+        gameState.isStunned = false;
+    }, 1500);
+}
+
 function triggerOverheat() {
     gameState.isOverheated = true;
     stopDrillSound();
-    showNotification("オーバーヒート！3秒間停止！");
+    if (!gameState.isStunned) showNotification("オーバーヒート！3秒間停止！");
     
     setTimeout(() => {
         gameState.heat = 0;
@@ -190,6 +224,8 @@ function clearCheckpoint(node, item) {
 
 function spawnObstacles() {
     veinContainer.innerHTML = '';
+    gameState.moles = [];
+    
     // Boulders
     for (let i = 0; i < 50; i++) {
         const depth = 1000 + (Math.random() * 95000);
@@ -201,13 +237,25 @@ function spawnObstacles() {
         let hp = 3;
         boulder.addEventListener('click', () => {
             hp--;
-            boulder.style.transform = `scale(${0.7 + hp*0.1})`;
             if (hp <= 0) {
                 boulder.classList.add('broken');
                 setTimeout(() => boulder.remove(), 300);
             }
         });
         veinContainer.appendChild(boulder);
+    }
+
+    // Moles (Hamlet enemies)
+    for (let i = 0; i < 20; i++) {
+        const depth = 5000 + (Math.random() * 90000);
+        const moleNode = document.createElement('div');
+        moleNode.className = 'obstacle mole mole-anim';
+        moleNode.style.top = `${depth}px`;
+        moleNode.innerHTML = '🐹';
+        
+        const moleObj = { y: depth, x: Math.random() * 80 + 10, dir: Math.random() > 0.5 ? 1 : -1, node: moleNode };
+        gameState.moles.push(moleObj);
+        veinContainer.appendChild(moleNode);
     }
 
     // Power Ups
@@ -229,16 +277,40 @@ function spawnObstacles() {
     }
 }
 
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const viewTop = drillerSpace.scrollTop;
+    const viewBottom = viewTop + window.innerHeight;
+
+    // Move Moles
+    if (gameState.isGameActive) {
+        gameState.moles.forEach(mole => {
+            mole.x += mole.dir * 0.8;
+            if (mole.x > 90 || mole.x < 10) mole.dir *= -1;
+            mole.node.style.left = `${mole.x}%`;
+            mole.node.style.transform = `scaleX(${mole.dir > 0 ? -1 : 1})`;
+        });
+    }
+
+    // Particles
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.life -= 0.03;
+        if (p.y > viewTop && p.y < viewBottom) {
+            ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+        }
+    });
+    requestAnimationFrame(gameLoop);
+}
+
 function updateHUD() {
     timerValue.innerText = gameState.timeLeft;
     depthValue.innerText = gameState.depth.toLocaleString();
     heatFill.style.width = `${gameState.heat}%`;
     drillHeatOverlay.style.fillOpacity = (gameState.heat / 100) * 0.8;
-    
-    // Timer Warning
     timerValue.style.color = gameState.timeLeft < 20 ? '#f44336' : '#ff9800';
 
-    // Drill Evolution
     const totalLevel = gameState.upgrades.cooling + gameState.upgrades.power;
     drillUnit.classList.toggle('evo-2', totalLevel >= 5);
     drillUnit.classList.toggle('evo-3', totalLevel >= 10);
@@ -259,7 +331,7 @@ function showNotification(msg) {
     setTimeout(() => notification.classList.add('hidden'), 3000);
 }
 
-// Reuse core systems
+// Audio
 function initAudio() {
     if (audioCtx) return;
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -297,21 +369,6 @@ function createParticles(y, speed) {
             life: 1.0, color: '#ff9800', size: Math.random() * 5 + 2
         });
     }
-}
-
-function gameLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const viewTop = drillerSpace.scrollTop;
-    const viewBottom = viewTop + window.innerHeight;
-    particles = particles.filter(p => p.life > 0);
-    particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.life -= 0.03;
-        if (p.y > viewTop && p.y < viewBottom) {
-            ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
-        }
-    });
-    requestAnimationFrame(gameLoop);
 }
 
 function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = drillerSpace.scrollHeight; }

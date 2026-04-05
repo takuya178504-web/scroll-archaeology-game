@@ -277,20 +277,34 @@ body, html {
     transform-origin: top center;
 }
 
-/* Mining Veins */
-.vein-node {
+/* Obstacles */
+.obstacle {
     position: absolute;
-    width: 150px;
+    width: 80px;
     height: 80px;
-    background: radial-gradient(ellipse at center, rgba(255,215,0,0.3) 0%, transparent 70%);
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #ffd700;
-    font-weight: 900;
-    font-size: 20px;
-    pointer-events: none;
-    animation: flash 1s infinite;
+    font-size: 40px;
+    z-index: 10;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.obstacle.mole {
+    font-size: 50px;
+}
+
+.obstacle.broken {
+    animation: explode 0.3s forwards;
+}
+
+@keyframes explode {
+    to { transform: scale(3); opacity: 0; }
+}
+
+.mole-anim {
+    transition: left 0.1s linear;
 }
 
 /* Drill Evolutions */
