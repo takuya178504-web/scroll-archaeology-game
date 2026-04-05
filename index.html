@@ -10,28 +10,26 @@
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
-    <!-- Game Container -->
+    <!-- Game Container (Puzzle Area) -->
     <div id="game-container">
-        <!-- Background Space (No Scroll) -->
-        <div id="driller-space">
-            <div id="soil-layer" class="texture-overlay"></div>
-            <!-- Fever Overlay -->
-            <div id="fever-overlay"></div>
-            <div id="vein-container"></div>
-            <div id="artifact-container"></div>
-            <!-- Canvas for sparks and dust -->
+        <!-- Puzzle Board background -->
+        <div id="driller-space" class="texture-overlay puzzle-bg">
+            <!-- Danger Line -->
+            <div id="danger-line"></div>
+            
+            <!-- Puzzle Grid -->
+            <div id="grid-container"></div>
+            
+            <!-- Projectiles Layer -->
+            <div id="projectiles-layer"></div>
+            
+            <!-- Canvas for explosion effects -->
             <canvas id="particle-canvas"></canvas>
             <div id="vignette"></div>
         </div>
 
-        <!-- Action Instructions overlay -->
-        <div id="action-hint">左右にドラッグして操作！</div>
-
-        <!-- Audio Toggle -->
-        <button id="sound-toggle" title="音声を切り替え">🔇</button>
-
-        <!-- Static Drill Unit -->
-        <div id="drill-container">
+        <!-- Driller Tank at TOP -->
+        <div id="drill-tank">
             <div id="drill-unit">
                 <svg viewBox="0 0 100 150">
                     <defs>
@@ -40,56 +38,37 @@
                             <stop offset="50%" stop-color="#cfd8dc" />
                             <stop offset="100%" stop-color="#455a64" />
                         </linearGradient>
-                        <filter id="glow">
-                            <feGaussianBlur stdDeviation="2" result="blur" />
-                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                        </filter>
                     </defs>
-                    <!-- Drill Shaft -->
-                    <rect x="45" y="0" width="10" height="40" fill="#37474f" />
-                    <!-- Drill Head (Cone) -->
-                    <path d="M50,150 L90,40 L10,40 Z" fill="url(#metal-grad)" />
-                    <!-- Spiral Lines -->
-                    <path d="M15,50 Q50,60 85,70 M12,80 Q50,90 88,100 M25,120 Q50,130 75,140" fill="none" stroke="#263238" stroke-width="2" />
-                    <!-- Heat GLOW layer (opacity controlled by JS) -->
-                    <path id="drill-heat-overlay" d="M50,150 L90,40 L10,40 Z" fill="#ff3d00" fill-opacity="0" filter="url(#glow)" />
+                    <rect x="35" y="0" width="30" height="30" fill="#263238" />
+                    <!-- Colored Drill bit (Color updated by JS) -->
+                    <path id="tank-drill-bit" d="M50,150 L80,30 L20,30 Z" fill="url(#metal-grad)" />
+                    <path d="M25,50 Q50,60 75,70 M22,80 Q50,90 78,100 M32,120 Q50,130 68,140" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" />
                 </svg>
             </div>
-            <div id="drill-sparks"></div>
+            <!-- Next Color Indicator -->
+            <div id="next-ammo-badge">NEXT: <div id="next-ammo-color"></div></div>
         </div>
+
+        <!-- Audio Toggle -->
+        <button id="sound-toggle" title="音声を切り替え">🔇</button>
 
         <!-- HUD (Always Fixed) -->
         <div id="hud">
             <div class="hud-top">
-                <div class="timer-container glass">
-                    <span class="label">残り時間</span>
-                    <span id="timer-value">120</span><span class="unit">s</span>
-                </div>
                 <div class="depth-counter">
-                    <span class="label">現在の深度</span>
+                    <span class="label">発掘深度 (Depth)</span>
                     <span id="depth-value">0</span><span class="unit">m</span>
                 </div>
-                <div class="heat-meter-container">
-                    <span class="label">ドリルの熱量</span>
-                    <div class="heat-meter">
-                        <div id="heat-fill"></div>
-                    </div>
-                </div>
+                <div class="heat-meter-container" style="display: none;"></div>
             </div>
             
-            <div class="hud-center">
+            <!-- Bottom HUD (Items / Next Artifact) -->
+            <div class="hud-bottom">
                 <div class="progress-container glass">
-                    <span class="label">次まで</span>
-                    <div class="progress-bar">
+                    <span class="label">次の遺物まで</span>
+                    <div class="progress-bar" style="width: 200px;">
                         <div id="progress-fill"></div>
                     </div>
-                </div>
-            </div>
-
-            <div class="hud-bottom">
-                <div id="item-slots">
-                    <div id="slot-cool" class="item-icon empty" title="冷却スプレー">❄️</div>
-                    <div id="slot-sonar" class="item-icon empty" title="ソナードローン">📡</div>
                 </div>
             </div>
         </div>
@@ -123,10 +102,10 @@
                 <div class="title-left">
                     <div class="logo-container">
                         <h1 class="main-logo">巻物考古学</h1>
-                        <p class="tagline">地底スラローム特急</p>
+                        <p class="tagline">地底・連鎖パズルシューティング</p>
                     </div>
-                    <button id="start-btn" class="primary-btn pulse">採掘を開始する</button>
-                    <p style="margin-top: 15px; font-size: 14px; opacity: 0.8;">画面を左右にスワイプして燃料（💎）を取り続けろ！<br>岩（🪨）に当たると大ダメージ！</p>
+                    <button id="start-btn" class="primary-btn pulse">発掘任務 開始</button>
+                    <p style="margin-top: 15px; font-size: 14px; opacity: 0.8;">画面をなぞって狙いを定め、タップ（クリック）でドリル弾を発射！<br>迫りくる<strong>同じ色の地層</strong>をくっつけて連鎖破壊せよ！</p>
                 </div>
                 <div class="title-right">
                     <div class="rank-mini">
