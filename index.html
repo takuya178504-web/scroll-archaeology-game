@@ -12,15 +12,20 @@
 <body>
     <!-- Game Container -->
     <div id="game-container">
-        <!-- Scrolling Ground -->
+        <!-- Background Space (No Scroll) -->
         <div id="driller-space">
             <div id="soil-layer" class="texture-overlay"></div>
+            <!-- Fever Overlay -->
+            <div id="fever-overlay"></div>
             <div id="vein-container"></div>
             <div id="artifact-container"></div>
             <!-- Canvas for sparks and dust -->
             <canvas id="particle-canvas"></canvas>
             <div id="vignette"></div>
         </div>
+
+        <!-- Action Instructions overlay -->
+        <div id="action-hint">長押しで採掘！</div>
 
         <!-- Audio Toggle -->
         <button id="sound-toggle" title="音声を切り替え">🔇</button>
@@ -118,9 +123,10 @@
                 <div class="title-left">
                     <div class="logo-container">
                         <h1 class="main-logo">巻物考古学</h1>
-                        <p class="tagline">地底の秘宝を最速で掘り当てろ！</p>
+                        <p class="tagline">長押しチキン＆パリィアクション</p>
                     </div>
                     <button id="start-btn" class="primary-btn pulse">採掘を開始する</button>
+                    <p style="margin-top: 15px; font-size: 14px; opacity: 0.8;">画面を長押しして加速。障害物は直前タップで粉砕！</p>
                 </div>
                 <div class="title-right">
                     <div class="rank-mini">

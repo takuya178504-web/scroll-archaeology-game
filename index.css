@@ -43,20 +43,19 @@ body, html {
 #driller-space {
     width: 100%;
     height: 100%;
-    overflow-y: scroll;
-    scrollbar-width: none;
+    overflow: hidden; /* V4: No physical scrolling */
     position: relative;
     z-index: 1;
 }
 
 #driller-space::-webkit-scrollbar {
-    display: none; /* Hide scrollbar Chrome/Safari */
+    display: none;
 }
 
 /* Soil Layer - Changes color as we go deeper */
 #soil-layer {
     width: 100%;
-    height: 100000px; /* Massive depth (100km!) */
+    height: 100000px;
     background: linear-gradient(
         to bottom,
         #8d6e63 0%,       /* Crust */
@@ -117,6 +116,74 @@ body, html {
 @keyframes pulsate {
     0%, 100% { transform: scale(1.0); opacity: 0.6; }
     50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* Fever & Action Hints */
+#fever-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 140, 0, 0.6) 100%);
+    mix-blend-mode: overlay;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 4;
+    transition: opacity 0.5s;
+}
+
+.fever-active #fever-overlay {
+    opacity: 1;
+    animation: feverPulse 1s infinite alternate;
+}
+
+@keyframes feverPulse {
+    0% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+#action-hint {
+    position: absolute;
+    top: 60%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 28px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.6);
+    pointer-events: none;
+    z-index: 40;
+    animation: fadePulse 2s infinite;
+}
+
+@keyframes fadePulse {
+    0%, 100% { opacity: 0.2; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+/* Speed Lines (For Boost) */
+.speed-lines {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 10px,
+        rgba(255,255,255,0.05) 10px,
+        rgba(255,255,255,0.05) 20px
+    );
+    background-size: 100% 200%;
+    animation: scrollLines 0.2s linear infinite;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.drilling.boost .speed-lines {
+    opacity: 1;
+}
+
+@keyframes scrollLines {
+    from { background-position: 0 0; }
+    to { background-position: 0 100%; }
 }
 
 /* HUD Overlay */
@@ -700,6 +767,26 @@ body, html {
 
 @keyframes explode {
     to { transform: scale(3); opacity: 0; }
+}
+
+/* Parry Explosion */
+.parry-explode {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, #fff 0%, #00e5ff 30%, transparent 70%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 60;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    animation: parryBoom 0.4s ease-out forwards;
+}
+
+@keyframes parryBoom {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+    50% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
 }
 
 .obstacle.mole {

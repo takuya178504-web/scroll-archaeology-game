@@ -16,6 +16,7 @@ const ARTIFACTS = [
 
 let gameState = {
     depth: 0,
+    speed: 0,
     maxUnlockedDepth: CHECKPOINT_INTERVAL,
     timeLeft: INITIAL_TIME,
     heat: 0,
@@ -25,13 +26,17 @@ let gameState = {
     isMuted: true,
     isGameActive: false,
     isStunned: false,
-    lastScrollTime: Date.now(),
-    lastScrollPos: 0,
+    isHolding: false,
+    lastPressTime: 0,
+    feverTime: 0,
+    lastFrameTime: Date.now(),
     ranking: JSON.parse(localStorage.getItem('scrollArch_ranking')) || [],
+    obstacles: [],
     moles: []
 };
 
 // Elements
+const gameContainer = document.getElementById('game-container');
 const drillerSpace = document.getElementById('driller-space');
 const timerValue = document.getElementById('timer-value');
 const depthValue = document.getElementById('depth-value');
@@ -49,6 +54,7 @@ const restartBtn = document.getElementById('restart-btn');
 const drillUnit = document.getElementById('drill-unit');
 const drillHeatOverlay = document.getElementById('drill-heat-overlay');
 const notification = document.getElementById('notification');
+const actionHint = document.getElementById('action-hint');
 
 let audioCtx, drillOsc, drillGain;
 let particles = [];
@@ -64,26 +70,35 @@ function init() {
 
     window.addEventListener('resize', resizeCanvas);
     
-    // Explicitly attach click listeners to avoid any resolution issues
-    if (startBtn) {
-        startBtn.onclick = (e) => {
-            e.preventDefault();
-            startGame();
-        };
-    }
-    
-    if (restartBtn) {
-        restartBtn.onclick = () => location.reload();
-    }
-    
+    if (startBtn) startBtn.onclick = (e) => { e.preventDefault(); startGame(); };
+    if (restartBtn) restartBtn.onclick = () => location.reload();
     soundToggle.addEventListener('click', toggleMute);
-    drillerSpace.addEventListener('scroll', handleScroll);
+    
+    // Action Controls (V4: Hold to drill)
+    gameContainer.addEventListener('mousedown', handlePress);
+    gameContainer.addEventListener('touchstart', handlePress, {passive: false});
+    window.addEventListener('mouseup', handleRelease);
+    window.addEventListener('touchend', handleRelease);
     
     requestAnimationFrame(gameLoop);
 }
 
+function handlePress(e) {
+    if (!gameState.isGameActive || gameState.isStunned) return;
+    if (e.target.id === 'sound-toggle') return;
+    
+    gameState.isHolding = true;
+    gameState.lastPressTime = Date.now();
+    actionHint.classList.add('hidden'); // Hide hint when playing
+    gameContainer.classList.add('drilling');
+}
+
+function handleRelease() {
+    gameState.isHolding = false;
+    gameContainer.classList.remove('drilling');
+}
+
 function startGame() {
-    console.log("Starting Game...");
     introScreen.classList.add('hidden');
     gameState.isGameActive = true;
     initAudio();
@@ -100,100 +115,157 @@ function startGame() {
 
 function endGame() {
     gameState.isGameActive = false;
+    gameState.isHolding = false;
     clearInterval(gameTimer);
     stopDrillSound();
     
-    const score = { depth: gameState.depth, artifacts: gameState.foundCount, date: new Date().toLocaleDateString() };
+    const score = { depth: Math.floor(gameState.depth), artifacts: gameState.foundCount, date: new Date().toLocaleDateString() };
     gameState.ranking.push(score);
     gameState.ranking.sort((a, b) => b.depth - a.depth);
     gameState.ranking = gameState.ranking.slice(0, 5);
     localStorage.setItem('scrollArch_ranking', JSON.stringify(gameState.ranking));
 
-    document.getElementById('final-depth').innerText = gameState.depth;
+    document.getElementById('final-depth').innerText = Math.floor(gameState.depth);
     document.getElementById('final-artifacts').innerText = gameState.foundCount;
     renderLeaderboards();
     gameoverModal.classList.remove('hidden');
 }
 
-function handleScroll() {
-    if (!gameState.isGameActive || gameState.isStunned) {
-        if (gameState.isStunned) drillerSpace.scrollTop = gameState.lastScrollPos;
-        return;
+function gameLoop() {
+    const now = Date.now();
+    const deltaMs = now - gameState.lastFrameTime;
+    gameState.lastFrameTime = now;
+
+    if (gameState.isGameActive && !gameState.isStunned) {
+        processPhysics(deltaMs);
+        checkCollisions();
+        updateVisuals();
     }
-
-    const currentPos = drillerSpace.scrollTop;
-    if (currentPos > gameState.maxUnlockedDepth - 100) {
-        drillerSpace.scrollTop = gameState.maxUnlockedDepth - 101;
-        return;
-    }
-
-    const currentTime = Date.now();
-    const timeDiff = currentTime - gameState.lastScrollTime;
-    const posDiff = Math.abs(currentPos - gameState.lastScrollPos);
-
-    if (timeDiff > 0 && !gameState.isOverheated) {
-        const speed = posDiff / timeDiff;
-        if (speed > 0.05) {
-            const coolingBonus = 1 - (gameState.upgrades.cooling * 0.15);
-            gameState.heat = Math.min(100, gameState.heat + (speed * 4 * coolingBonus));
-            
-            document.body.classList.add('shake-screen');
-            drillUnit.parentElement.classList.add('drilling');
-            createParticles(currentPos + window.innerHeight * 0.8, speed);
-            updateDrillSound(speed);
-        } else {
-            gameState.heat = Math.max(0, gameState.heat - 2);
-            document.body.classList.remove('shake-screen');
-            drillUnit.parentElement.classList.remove('drilling');
-            stopDrillSound();
-        }
-    }
-
-    if (gameState.heat >= 100) triggerOverheat();
-    checkMoleCollision(currentPos);
-
-    gameState.depth = Math.floor(currentPos);
-    gameState.lastScrollTime = currentTime;
-    gameState.lastScrollPos = currentPos;
-    updateHUD();
+    
+    renderParticles();
+    requestAnimationFrame(gameLoop);
 }
 
-function checkMoleCollision(depth) {
-    const drillY = depth + window.innerHeight * 0.8;
+function processPhysics(deltaMs) {
+    let targetSpeed = 0;
+    
+    if (gameState.feverTime > 0) {
+        gameState.feverTime -= deltaMs;
+        targetSpeed = 50; // Super speed!
+        gameState.heat = Math.max(0, gameState.heat - 2); // Cools down rapidly
+        if (gameState.feverTime <= 0) gameContainer.classList.remove('fever-active');
+    } else if (gameState.isHolding && !gameState.isOverheated) {
+        targetSpeed = 25 + (gameState.upgrades.power * 2); 
+        const coolingBonus = Math.max(0.2, 1 - (gameState.upgrades.cooling * 0.15));
+        gameState.heat = Math.min(100, gameState.heat + (0.3 * coolingBonus));
+    } else {
+        targetSpeed = 0;
+        gameState.heat = Math.max(0, gameState.heat - 1.0);
+    }
+
+    // Accelerate / Decelerate
+    gameState.speed += (targetSpeed - gameState.speed) * 0.1;
+    if (gameState.speed < 0.1) gameState.speed = 0;
+
+    if (gameState.heat >= 100 && !gameState.isOverheated) triggerOverheat();
+
+    // Checkpoint gate
+    let nextPos = gameState.depth + gameState.speed;
+    if (nextPos >= gameState.maxUnlockedDepth - 100 && gameState.speed > 0) {
+        nextPos = gameState.maxUnlockedDepth - 101;
+        gameState.speed = 0; // Force stop at checkpoint
+    }
+
+    gameState.depth = nextPos;
+    drillerSpace.scrollTop = gameState.depth;
+}
+
+function checkCollisions() {
+    const drillY = gameState.depth + window.innerHeight * 0.85;
+    const drillXCenter = 50; // percentage
+    const hitRadiusX = 15; // percentage width
+    
+    // Handle Moles movement and check collision
     gameState.moles.forEach(mole => {
-        const distY = Math.abs(drillY - mole.y);
-        const distX = Math.abs(50 - mole.x);
-        if (distY < 60 && distX < 10 && !gameState.isStunned) {
-            triggerStun("🐹 モグラに突撃された！オーバーヒート！");
-        }
+        mole.x += mole.dir * 0.5;
+        if (mole.x > 90 || mole.x < 10) mole.dir *= -1;
+        mole.node.style.left = `${mole.x}%`;
+        mole.node.style.transform = `scaleX(${mole.dir > 0 ? -1 : 1})`;
+        
+        checkUnitCollision(mole, drillY, drillXCenter, hitRadiusX, true);
     });
+
+    // Handle Boulders
+    gameState.obstacles.forEach(boulder => {
+        checkUnitCollision(boulder, drillY, drillXCenter, hitRadiusX, false);
+    });
+}
+
+function checkUnitCollision(obj, drillY, drillXCenter, hitRadiusX, isMole) {
+    if (obj.destroyed) return;
+    
+    const distY = Math.abs(drillY - obj.y);
+    const distX = Math.abs(drillXCenter - obj.x);
+    
+    if (distY < 60 && distX < hitRadiusX && !gameState.isStunned) {
+        const timeSincePress = Date.now() - gameState.lastPressTime;
+        
+        // PARRY (Just frame) OR FEVER
+        if (gameState.feverTime > 0 || timeSincePress < 300) {
+            triggerParry(obj.node, isMole ? "🐹 モグラ粉砕！" : "💥 岩石粉砕！");
+            obj.destroyed = true;
+        } else {
+            // CRASH
+            triggerStun(isMole ? "🐹 モグラに激突！" : "🪨 岩石に激突！");
+        }
+    }
+}
+
+function triggerParry(node, msg) {
+    // Explosion FX
+    const boom = document.createElement('div');
+    boom.className = 'parry-explode';
+    node.appendChild(boom);
+    node.classList.add('broken');
+    setTimeout(() => node.remove(), 400);
+
+    gameState.heat = 0;
+    gameState.speed = 50; // instantaneous burst
+    activateFever(1500); // 1.5sec mini fever
+    showNotification(`🔥 PARRY!! ${msg}`);
 }
 
 function triggerStun(msg) {
     gameState.isStunned = true;
+    gameState.speed = -20; // Bounce back
     gameState.heat = 100;
-    showNotification(msg);
-    let stunAnim = setInterval(() => {
-        drillUnit.style.transform = `rotate(${Math.random() * 20 - 10}deg)`;
-    }, 50);
+    gameContainer.classList.remove('drilling');
+    
+    showNotification(msg + " (ペナルティ)");
+    let stunAnim = setInterval(() => { drillUnit.style.transform = `rotate(${Math.random() * 20 - 10}deg)`; }, 50);
 
     setTimeout(() => {
         clearInterval(stunAnim);
         drillUnit.style.transform = "";
         triggerOverheat();
         gameState.isStunned = false;
-    }, 1500);
+    }, 1000);
 }
 
 function triggerOverheat() {
     gameState.isOverheated = true;
     stopDrillSound();
-    if (!gameState.isStunned) showNotification("オーバーヒート！3秒間停止！");
+    if (!gameState.isStunned) showNotification("オーバーヒート！冷却中...");
     setTimeout(() => {
         gameState.heat = 0;
         gameState.isOverheated = false;
         updateHUD();
-    }, 3000);
+    }, 2500);
+}
+
+function activateFever(durationMs) {
+    gameState.feverTime = durationMs;
+    gameContainer.classList.add('fever-active');
 }
 
 function spawnCheckpoint(depth) {
@@ -203,127 +275,109 @@ function spawnCheckpoint(depth) {
     spot.style.top = `${depth}px`;
     spot.style.left = `50%`;
     spot.style.transform = `translateX(-50%)`;
-    spot.innerHTML = `<span class="gift-box" style="font-size:60px;">📦</span><div style="font-size:12px; font-weight:800;">CHECKPOINT</div>`;
+    spot.innerHTML = `<span class="gift-box" style="font-size:60px;">📦</span><div style="font-size:12px; font-weight:800;">BREAK ME!</div>`;
     
-    spot.onclick = () => {
-        let count = 0;
-        spot.innerHTML = `🔨`;
-        const interval = setInterval(() => {
-            count++;
-            spot.style.transform = `translateX(-50%) scale(${1 + count*0.1})`;
-            if (count >= 10) {
-                clearInterval(interval);
-                clearCheckpoint(spot, item);
-            }
-        }, 100);
-    };
+    // In V4, it's click to break the gate open OR drill into it
+    spot.onclick = () => clearCheckpoint(spot, item);
+    // Auto-break if drilled close enough (handled here for simplicity)
+    const checkGate = setInterval(() => {
+        if (!gameState.isGameActive) return clearInterval(checkGate);
+        if (gameState.depth > depth - 150) {
+            clearInterval(checkGate);
+            clearCheckpoint(spot, item);
+        }
+    }, 100);
+    
     artifactContainer.appendChild(spot);
 }
 
 function clearCheckpoint(node, item) {
     node.remove();
     gameState.foundCount++;
-    gameState.timeLeft += 40;
+    gameState.timeLeft += 30; // +30 seconds
     gameState.maxUnlockedDepth += CHECKPOINT_INTERVAL;
     gameState.heat = 0;
-    showNotification(`${item.name} 解放！タイム +40s`);
+    
+    // Huge Fever Time for Checkpoint!
+    activateFever(5000); 
+    
+    showNotification(`${item.name} 獲得！ FEVER MODE!!`);
     spawnCheckpoint(gameState.maxUnlockedDepth);
     updateHUD();
 }
 
 function spawnObstacles() {
     veinContainer.innerHTML = '';
+    gameState.obstacles = [];
     gameState.moles = [];
-    for (let i = 0; i < 50; i++) {
-        const depth = 1000 + (Math.random() * 95000);
+    
+    for (let i = 0; i < 60; i++) {
+        const depth = 2000 + (Math.random() * 95000);
         const boulder = document.createElement('div');
         boulder.className = 'obstacle boulder';
         boulder.style.top = `${depth}px`;
-        boulder.style.left = `${10 + Math.random() * 80}%`;
+        const xPos = 10 + Math.random() * 80;
+        boulder.style.left = `${xPos}%`;
         boulder.innerHTML = '🪨';
-        let hp = 3;
-        boulder.onclick = () => {
-            hp--;
-            if (hp <= 0) {
-                boulder.classList.add('broken');
-                setTimeout(() => boulder.remove(), 300);
-            }
-        };
         veinContainer.appendChild(boulder);
+        gameState.obstacles.push({ y: depth, x: xPos, node: boulder, destroyed: false });
     }
-    for (let i = 0; i < 20; i++) {
+    
+    for (let i = 0; i < 30; i++) {
         const depth = 5000 + (Math.random() * 90000);
         const moleNode = document.createElement('div');
         moleNode.className = 'obstacle mole mole-anim';
         moleNode.style.top = `${depth}px`;
         moleNode.innerHTML = '🐹';
-        const moleObj = { y: depth, x: Math.random() * 80 + 10, dir: Math.random() > 0.5 ? 1 : -1, node: moleNode };
-        gameState.moles.push(moleObj);
         veinContainer.appendChild(moleNode);
-    }
-    for (let i = 0; i < 30; i++) {
-        const depth = 2000 + (Math.random() * 90000);
-        const part = document.createElement('div');
-        part.className = 'artifact-spot bonus-item';
-        part.style.top = `${depth}px`;
-        part.style.left = `${10 + Math.random() * 80}%`;
-        const type = Math.random() > 0.5 ? 'power' : 'cooling';
-        part.innerHTML = type === 'power' ? '⚡' : '❄️';
-        part.onclick = () => {
-            gameState.upgrades[type]++;
-            showNotification(`ドリル強化：${type === 'power' ? 'パワー' : '冷却'} Lv.${gameState.upgrades[type]}`);
-            updateHUD();
-            part.remove();
-        };
-        artifactContainer.appendChild(part);
+        gameState.moles.push({ y: depth, x: Math.random() * 80 + 10, dir: Math.random() > 0.5 ? 1 : -1, node: moleNode, destroyed: false });
     }
 }
 
-function gameLoop() {
+function updateVisuals() {
+    const isMoving = gameState.speed > 5;
+    
+    if (isMoving && !gameState.isOverheated) {
+        document.body.classList.add('shake-screen');
+        createParticles(gameState.depth + window.innerHeight * 0.8, gameState.speed / 10);
+        updateDrillSound(gameState.speed / 50);
+        
+        if (gameState.speed > 35) gameContainer.classList.add('boost');
+        else gameContainer.classList.remove('boost');
+    } else {
+        document.body.classList.remove('shake-screen');
+        gameContainer.classList.remove('boost');
+        stopDrillSound();
+    }
+    
+    updateHUD();
+}
+
+function renderParticles() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const viewTop = drillerSpace.scrollTop;
     const viewBottom = viewTop + window.innerHeight;
 
-    if (gameState.isGameActive) {
-        gameState.moles.forEach(mole => {
-            mole.x += mole.dir * 0.8;
-            if (mole.x > 90 || mole.x < 10) mole.dir *= -1;
-            mole.node.style.left = `${mole.x}%`;
-            mole.node.style.transform = `scaleX(${mole.dir > 0 ? -1 : 1})`;
-        });
-    } else {
-        // Decorative particles for title
-        if (Math.random() > 0.95) {
-            createParticles(viewTop + Math.random() * window.innerHeight, 0.1);
-        }
-    }
-
     particles = particles.filter(p => p.life > 0);
     particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.life -= 0.03;
+        p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.life -= 0.05;
         if (p.y > viewTop && p.y < viewBottom) {
             ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(p.x, p.y - viewTop, p.size, 0, Math.PI * 2); ctx.fill(); // Offset by scroll!
         }
     });
-    requestAnimationFrame(gameLoop);
 }
 
 function updateHUD() {
     timerValue.innerText = gameState.timeLeft;
-    depthValue.innerText = gameState.depth.toLocaleString();
+    depthValue.innerText = Math.floor(gameState.depth).toLocaleString();
     heatFill.style.width = `${gameState.heat}%`;
     drillHeatOverlay.style.fillOpacity = (gameState.heat / 100) * 0.8;
-    timerValue.style.color = gameState.timeLeft < 20 ? '#f44336' : '#ff9800';
+    timerValue.style.color = gameState.timeLeft < 20 ? '#f44336' : (gameState.feverTime > 0 ? '#ffeb3b' : '#ff9800');
 
-    // Progress to next checkpoint
-    const currentBase = gameState.maxUnlockedDepth - CHECKPOINT_INTERVAL;
-    const progress = ((gameState.depth - currentBase) / CHECKPOINT_INTERVAL) * 100;
+    const currentBase = (gameState.foundCount) * CHECKPOINT_INTERVAL;
+    let progress = ((gameState.depth - currentBase) / CHECKPOINT_INTERVAL) * 100;
     progressFill.style.width = `${Math.min(100, Math.max(0, progress))}%`;
-
-    const totalLevel = gameState.upgrades.cooling + gameState.upgrades.power;
-    drillUnit.classList.toggle('evo-2', totalLevel >= 5);
-    drillUnit.classList.toggle('evo-3', totalLevel >= 10);
 }
 
 function renderLeaderboards() {
@@ -347,7 +401,12 @@ function renderLeaderboards() {
 function showNotification(msg) {
     notification.querySelector('.message').innerText = msg;
     notification.classList.remove('hidden');
-    setTimeout(() => notification.classList.add('hidden'), 3000);
+    // Restart animation
+    notification.style.animation = 'none';
+    notification.offsetHeight; 
+    notification.style.animation = 'slideUp 0.3s ease-out';
+    
+    setTimeout(() => notification.classList.add('hidden'), 2500);
 }
 
 function initAudio() {
@@ -368,27 +427,32 @@ function toggleMute() {
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-function updateDrillSound(speed) {
+function updateDrillSound(speedRatio) {
     if (!drillGain || gameState.isMuted) return;
-    drillOsc.frequency.setTargetAtTime(60 + speed * 300, audioCtx.currentTime, 0.1);
-    drillGain.gain.setTargetAtTime(Math.min(0.2, speed * 0.4), audioCtx.currentTime, 0.1);
+    drillOsc.frequency.setTargetAtTime(60 + speedRatio * 400, audioCtx.currentTime, 0.1);
+    drillGain.gain.setTargetAtTime(Math.min(0.2, speedRatio * 0.3), audioCtx.currentTime, 0.1);
 }
 
 function stopDrillSound() {
     if (drillGain) drillGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2);
 }
 
-function createParticles(y, speed) {
-    const count = Math.floor(speed * 10);
+function createParticles(y, intensity) {
+    const count = Math.floor(intensity * 10);
+    const color = gameState.feverTime > 0 ? '#ffeb3b' : '#ff9800';
+    
     for (let i = 0; i < count; i++) {
         particles.push({
-            x: window.innerWidth / 2 + (Math.random() - 0.5) * 100, y: y,
-            vx: (Math.random() - 0.5) * 20, vy: -(Math.random() * 10 + 5),
-            life: 1.0, color: '#ff9800', size: Math.random() * 5 + 2
+            x: window.innerWidth / 2 + (Math.random() - 0.5) * 40, y: y,
+            vx: (Math.random() - 0.5) * 30, vy: -(Math.random() * 20 + 5),
+            life: 1.0, color: color, size: Math.random() * 8 + 3
         });
     }
 }
 
-function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = drillerSpace.scrollHeight; }
+function resizeCanvas() { 
+    canvas.width = window.innerWidth; 
+    canvas.height = window.innerHeight; // Fixed to viewport since we handle offset manually!
+}
 
 init();
