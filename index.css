@@ -176,15 +176,53 @@ body, html {
     transition: width 0.1s linear;
 }
 
+#sound-toggle, #item-slots {
+    pointer-events: auto;
+}
+
+#item-slots {
+    display: flex;
+    gap: 10px;
+    margin: 0 15px;
+}
+
+.item-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 22px;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.item-icon.empty {
+    opacity: 0.2;
+    filter: grayscale(1);
+    cursor: default;
+}
+
+.item-icon.active {
+    background: var(--accent);
+    box-shadow: 0 0 15px var(--accent);
+    transform: scale(1.1);
+}
+
 #collection-btn, #upgrade-btn {
     pointer-events: auto;
-    padding: 10px 18px;
+    padding: 10px 15px;
     border-radius: 20px;
     border: none;
     background: var(--glass);
     color: white;
     font-weight: 800;
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
     backdrop-filter: var(--glass-blur);
     border: 1px solid rgba(255,255,255,0.1);
@@ -193,7 +231,6 @@ body, html {
 
 #upgrade-btn {
     background: var(--accent);
-    margin-left: 10px;
 }
 
 #collection-btn:active, #upgrade-btn:active {
@@ -201,9 +238,11 @@ body, html {
 }
 
 .hud-bottom {
-    margin-top: 15px;
+    margin-top: 20px;
     display: flex;
     justify-content: center;
+    align-items: center;
+    width: 100%;
 }
 
 /* Drill Styling */
@@ -226,8 +265,32 @@ body, html {
     transform-origin: top center;
 }
 
-#drill-unit svg {
-    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.6));
+/* Mining Veins */
+.vein-node {
+    position: absolute;
+    width: 150px;
+    height: 80px;
+    background: radial-gradient(ellipse at center, rgba(255,215,0,0.3) 0%, transparent 70%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #ffd700;
+    font-weight: 900;
+    font-size: 20px;
+    pointer-events: none;
+    animation: flash 1s infinite;
+}
+
+/* Drill Evolutions */
+#drill-unit.evo-2 svg path {
+    fill: #ffd700; /* Gold */
+}
+#drill-unit.evo-3 svg path {
+    fill: #00e5ff; /* Cyan Energy */
+    filter: drop-shadow(0 0 15px #00e5ff);
+}
+#drill-unit.evo-3 #drill-heat-overlay {
+    fill: #ffffff;
 }
 
 #drill-heat-overlay {

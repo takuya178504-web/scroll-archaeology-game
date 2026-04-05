@@ -15,6 +15,7 @@
         <!-- Scrolling Ground -->
         <div id="driller-space">
             <div id="soil-layer" class="texture-overlay"></div>
+            <div id="vein-container"></div>
             <div id="artifact-container"></div>
             <!-- Canvas for sparks and dust -->
             <canvas id="particle-canvas"></canvas>
@@ -68,8 +69,12 @@
             
             <div class="hud-bottom">
                 <button id="collection-btn">
-                    発見済: <span id="found-count">0</span>/10
+                     発見済: <span id="found-count">0</span>/10
                 </button>
+                <div id="item-slots">
+                    <div id="slot-cool" class="item-icon empty" title="冷却スプレー">❄️</div>
+                    <div id="slot-sonar" class="item-icon empty" title="ソナードローン">📡</div>
+                </div>
                 <button id="upgrade-btn">ドリルを強化</button>
             </div>
         </div>
