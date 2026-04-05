@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scroll Archaeology - スクロール考古学</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <!-- Game Container -->
+    <div id="game-container">
+        <!-- Scrolling Ground -->
+        <div id="driller-space">
+            <div id="soil-layer"></div>
+            <div id="artifact-container"></div>
+        </div>
+
+        <!-- HUD (Always Fixed) -->
+        <div id="hud">
+            <div class="hud-top">
+                <div class="depth-counter">
+                    <span class="label">DEPTH</span>
+                    <span id="depth-value">0</span><span class="unit">m</span>
+                </div>
+                <div class="heat-meter-container">
+                    <span class="label">DRILL HEAT</span>
+                    <div class="heat-meter">
+                        <div id="heat-fill"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="collection-btn">
+                <span id="found-count">0</span>/10 FOUND
+            </button>
+        </div>
+
+        <!-- Notification -->
+        <div id="notification" class="hidden">
+            <span class="message">ARTIFACT DISCOVERED!</span>
+        </div>
+
+        <!-- Collection Modal -->
+        <div id="collection-modal" class="hidden">
+            <div class="modal-content glass">
+                <div class="modal-header">
+                    <h2>Museum Collection</h2>
+                    <button id="close-modal">×</button>
+                </div>
+                <div id="artifacts-grid">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Intro -->
+        <div id="intro-screen">
+            <div class="glass intro-card">
+                <h1>SCROLL ARCHAEOLOGY</h1>
+                <p>Scroll down to drill through the earth.<br>Heat up too much, and the drill slows down.<br>Find all 10 artifacts hidden in the depths.</p>
+                <button id="start-btn">START DIGGING</button>
+            </div>
+        </div>
+
+        <!-- Overheat Warning -->
+        <div id="overheat-warning" class="hidden">OVERHEAT!</div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
