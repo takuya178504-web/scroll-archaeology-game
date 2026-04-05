@@ -55,6 +55,10 @@
         <!-- HUD (Always Fixed) -->
         <div id="hud">
             <div class="hud-top">
+                <div class="timer-container glass">
+                    <span class="label">残り時間</span>
+                    <span id="timer-value">120</span><span class="unit">s</span>
+                </div>
                 <div class="depth-counter">
                     <span class="label">現在の深度</span>
                     <span id="depth-value">0</span><span class="unit">m</span>
@@ -68,14 +72,10 @@
             </div>
             
             <div class="hud-bottom">
-                <button id="collection-btn">
-                     発見済: <span id="found-count">0</span>/10
-                </button>
                 <div id="item-slots">
                     <div id="slot-cool" class="item-icon empty" title="冷却スプレー">❄️</div>
                     <div id="slot-sonar" class="item-icon empty" title="ソナードローン">📡</div>
                 </div>
-                <button id="upgrade-btn">ドリルを強化</button>
             </div>
         </div>
 
@@ -84,29 +84,21 @@
             <span class="message">遺品を発見しました！</span>
         </div>
 
-        <!-- Collection Modal -->
-        <div id="collection-modal" class="modal hidden">
+        <!-- Game Over / Ranking Modal -->
+        <div id="gameover-modal" class="modal hidden">
             <div class="modal-content glass">
-                <div class="modal-header">
-                    <h2>地層遺物コレクション</h2>
-                    <button id="close-collection">×</button>
+                <h1 id="gameover-title">⏰ タイムアップ！</h1>
+                <div class="stats-box">
+                    <p>最終深度: <span id="final-depth">0</span>m</p>
+                    <p>獲得遺物: <span id="final-artifacts">0</span>個</p>
                 </div>
-                <div id="artifacts-grid">
-                    <!-- 動的に生成 -->
+                <div class="ranking-box">
+                    <h3>🏆 地底最速ランキング</h3>
+                    <ol id="leaderboard-list">
+                        <!-- 動的に生成 -->
+                    </ol>
                 </div>
-            </div>
-        </div>
-
-        <!-- Upgrade Modal -->
-        <div id="upgrade-modal" class="modal hidden">
-            <div class="modal-content glass">
-                <div class="modal-header">
-                    <h2>ドリル工房</h2>
-                    <button id="close-upgrade">×</button>
-                </div>
-                <div id="upgrades-list">
-                    <!-- 動的に生成 -->
-                </div>
+                <button id="restart-btn" class="primary-btn">再挑戦する</button>
             </div>
         </div>
 
