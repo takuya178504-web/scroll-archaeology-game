@@ -328,10 +328,15 @@ function updateHUD() {
 
 function renderLeaderboards() {
     const render = (list, data) => {
-        list.innerHTML = data.length ? '' : '<li>記録なし</li>';
+        if (data.length === 0) {
+            list.innerHTML = `<li><span>1. 10,000m (伝説)</span> <span>2024/--/--</span></li>
+                              <li><span>2. 5,000m (新人)</span> <span>2024/--/--</span></li>`;
+            return;
+        }
+        list.innerHTML = '';
         data.forEach((entry, i) => {
             const li = document.createElement('li');
-            li.innerHTML = `<span>${i+1}. ${entry.depth}m</span> <span>${entry.date}</span>`;
+            li.innerHTML = `<span>${i+1}. ${entry.depth.toLocaleString()}m</span> <span>${entry.date}</span>`;
             list.appendChild(li);
         });
     };

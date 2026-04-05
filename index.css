@@ -459,27 +459,30 @@ body, html {
 }
 
 .main-logo {
-    font-size: 64px;
+    font-size: 82px;
     font-weight: 900;
-    background: linear-gradient(to bottom, #fff9c4, #fbc02d);
+    margin-bottom: 0;
+    background: linear-gradient(180deg, #fff 0%, #ffc107 50%, #ff8f00 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 30px rgba(251,192,45,0.4);
-    margin-bottom: 5px;
-    animation: float 3s infinite ease-in-out;
+    filter: drop-shadow(0 0 15px rgba(255, 193, 7, 0.5));
+    animation: float 4s infinite ease-in-out;
+    letter-spacing: -2px;
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+    0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 15px rgba(255, 193, 7, 0.3)); }
+    50% { transform: translateY(-15px) scale(1.02); filter: drop-shadow(0 0 25px rgba(255, 193, 7, 0.6)); }
 }
 
 .tagline {
-    font-size: 16px;
-    opacity: 0.6;
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffb300;
     margin-bottom: 40px;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
 }
 
 .rank-mini h3 {
@@ -492,24 +495,39 @@ body, html {
 
 #menu-leaderboard {
     list-style: none;
-    font-size: 14px;
+    font-size: 15px;
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 12px;
 }
 
 #menu-leaderboard li {
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 10px 12px;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(255,255,255,0.05);
 }
 
+#menu-leaderboard li:nth-child(1) { color: #ffd700; background: rgba(255,215,0,0.1); }
+#menu-leaderboard li:nth-child(2) { color: #c0c0c0; }
+#menu-leaderboard li:nth-child(3) { color: #cd7f32; }
+
 .pulse {
-    animation: pulseAnim 2s infinite;
+    animation: pulseAnim 2s infinite ease-in-out;
+    background: linear-gradient(135deg, #ff9800, #f44336) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 10px 30px rgba(244,67,54,0.4) !important;
 }
 
 @keyframes pulseAnim {
-    0% { transform: scale(1); box-shadow: 0 0 0 rgba(251,192,45,0); }
-    50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(251,192,45,0.3); }
-    100% { transform: scale(1); box-shadow: 0 0 0 rgba(251,192,45,0); }
+    0% { transform: scale(1); box-shadow: 0 10px 30px rgba(244,67,54,0.4); }
+    50% { transform: scale(1.05); box-shadow: 0 15px 40px rgba(244,67,54,0.6); }
+    100% { transform: scale(1); box-shadow: 0 10px 30px rgba(244,67,54,0.4); }
 }
 
 .modal {
