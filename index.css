@@ -66,6 +66,16 @@ body, html {
     left: 0;
 }
 
+.texture-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.15;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
 #particle-canvas {
     position: absolute;
     top: 0;
@@ -210,25 +220,69 @@ body, html {
 }
 
 #drill-unit {
-    width: 80px;
-    height: 120px;
+    width: 100px;
+    height: 150px;
     transition: transform 0.1s;
+    transform-origin: top center;
 }
 
 #drill-unit svg {
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.6));
+}
+
+#drill-heat-overlay {
+    transition: fill-opacity 0.2s;
 }
 
 .drilling #drill-unit {
     animation: vibrate 0.05s infinite;
 }
 
+/* Screen Shake for the WHOLE container */
+.shake-screen #game-container {
+    animation: screenShake 0.1s infinite;
+}
+
+@keyframes screenShake {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translate(-3px, 0px) rotate(1deg); }
+    30% { transform: translate(3px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(1deg); }
+    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translate(3px, 1px) rotate(-1deg); }
+    80% { transform: translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translate(1px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
 @keyframes vibrate {
     0% { transform: translate(0, 0); }
-    25% { transform: translate(2px, 1px); }
-    50% { transform: translate(-1px, -2px); }
-    75% { transform: translate(1px, 2px); }
+    25% { transform: translate(1.5px, 0.5px); }
+    50% { transform: translate(-1px, -1.5px); }
+    75% { transform: translate(0.5px, 1px); }
     100% { transform: translate(0, 0); }
+}
+
+#sound-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 500;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
 }
 
 #drill-sparks {

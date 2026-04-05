@@ -14,19 +14,38 @@
     <div id="game-container">
         <!-- Scrolling Ground -->
         <div id="driller-space">
-            <div id="soil-layer"></div>
+            <div id="soil-layer" class="texture-overlay"></div>
             <div id="artifact-container"></div>
             <!-- Canvas for sparks and dust -->
             <canvas id="particle-canvas"></canvas>
         </div>
 
+        <!-- Audio Toggle -->
+        <button id="sound-toggle" title="音声を切り替え">🔇</button>
+
         <!-- Static Drill Unit -->
         <div id="drill-container">
             <div id="drill-unit">
-                <svg viewBox="0 0 100 100">
-                    <path d="M50,10 L90,90 L10,90 Z" fill="#757575" />
-                    <circle cx="50" cy="90" r="10" fill="#333" />
-                    <path d="M50,15 L80,85 L20,85 Z" fill="rgba(255,255,255,0.1)" />
+                <svg viewBox="0 0 100 150">
+                    <defs>
+                        <linearGradient id="metal-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#455a64" />
+                            <stop offset="50%" stop-color="#cfd8dc" />
+                            <stop offset="100%" stop-color="#455a64" />
+                        </linearGradient>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="2" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
+                    </defs>
+                    <!-- Drill Shaft -->
+                    <rect x="45" y="0" width="10" height="40" fill="#37474f" />
+                    <!-- Drill Head (Cone) -->
+                    <path d="M50,150 L90,40 L10,40 Z" fill="url(#metal-grad)" />
+                    <!-- Spiral Lines -->
+                    <path d="M15,50 Q50,60 85,70 M12,80 Q50,90 88,100 M25,120 Q50,130 75,140" fill="none" stroke="#263238" stroke-width="2" />
+                    <!-- Heat GLOW layer (opacity controlled by JS) -->
+                    <path id="drill-heat-overlay" d="M50,150 L90,40 L10,40 Z" fill="#ff3d00" fill-opacity="0" filter="url(#glow)" />
                 </svg>
             </div>
             <div id="drill-sparks"></div>

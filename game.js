@@ -23,16 +23,21 @@ let gameState = {
     foundItems: JSON.parse(localStorage.getItem('scrollArch_found')) || [],
     upgrades: JSON.parse(localStorage.getItem('scrollArch_upgrades')) || { cooling: 0, power: 0 },
     isOverheated: false,
+    isMuted: true,
     lastScrollTime: Date.now(),
     lastScrollPos: 0
 };
 
-// Particles
+// Particles & Canvas
 let particles = [];
 const canvas = document.getElementById('particle-canvas');
 const ctx = canvas.getContext('2d');
 
+// Audio Context
+let audioCtx, drillOsc, drillGain;
+
 // Elements
+const body = document.body;
 const drillerSpace = document.getElementById('driller-space');
 const depthValue = document.getElementById('depth-value');
 const heatFill = document.getElementById('heat-fill');
@@ -43,6 +48,8 @@ const startBtn = document.getElementById('start-btn');
 const introScreen = document.getElementById('intro-screen');
 const drillContainer = document.getElementById('drill-container');
 const drillUnit = document.getElementById('drill-unit');
+const drillHeatOverlay = document.getElementById('drill-heat-overlay');
+const soundToggle = document.getElementById('sound-toggle');
 
 const collectionBtn = document.getElementById('collection-btn');
 const collectionModal = document.getElementById('collection-modal');
@@ -62,7 +69,13 @@ function init() {
     renderUpgrades();
 
     window.addEventListener('resize', resizeCanvas);
-    startBtn.addEventListener('click', () => introScreen.classList.add('hidden'));
+    
+    startBtn.addEventListener('click', () => {
+        introScreen.classList.add('hidden');
+        initAudio();
+    });
+
+    soundToggle.addEventListener('click', toggleMute);
     closeCollection.addEventListener('click', () => collectionModal.classList.add('hidden'));
     closeUpgrade.addEventListener('click', () => upgradeModal.classList.add('hidden'));
     
@@ -77,8 +90,27 @@ function init() {
     });
 
     drillerSpace.addEventListener('scroll', handleScroll);
-    
     requestAnimationFrame(gameLoop);
+}
+
+function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    drillOsc = audioCtx.createOscillator();
+    drillOsc.type = 'sawtooth';
+    drillGain = audioCtx.createGain();
+    
+    drillGain.gain.value = 0;
+    drillOsc.connect(drillGain);
+    drillGain.connect(audioCtx.destination);
+    drillOsc.start();
+}
+
+function toggleMute() {
+    gameState.isMuted = !gameState.isMuted;
+    soundToggle.innerText = gameState.isMuted ? '🔇' : '🔊';
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 }
 
 function resizeCanvas() {
@@ -95,7 +127,7 @@ function spawnArtifacts() {
         spot.style.left = `${20 + Math.random() * 60}%`;
         
         if (gameState.foundItems.includes(item.id)) {
-            spot.innerHTML = `<span style="font-size: 40px; filter: grayscale(0.5); opacity: 0.3;">${item.icon}</span>`;
+            spot.innerHTML = `<span style="font-size: 40px; filter: grayscale(0.5); opacity: 0.2;">${item.icon}</span>`;
         } else {
             spot.innerHTML = `<span style="font-size: 40px;">🎁</span>`;
             spot.addEventListener('click', () => collectItem(item));
@@ -105,14 +137,12 @@ function spawnArtifacts() {
 }
 
 function handleScroll() {
-    if (gameState.isOverheated) return;
-
     const currentPos = drillerSpace.scrollTop;
     const currentTime = Date.now();
     const timeDiff = currentTime - gameState.lastScrollTime;
     const posDiff = Math.abs(currentPos - gameState.lastScrollPos);
     
-    if (timeDiff > 0) {
+    if (timeDiff > 0 && !gameState.isOverheated) {
         const rawSpeed = posDiff / timeDiff;
         let speed = rawSpeed;
 
@@ -124,33 +154,37 @@ function handleScroll() {
             const powerBonus = gameState.upgrades.power * 0.2;
             speed *= (0.3 + powerBonus);
             heatMultiplier = 4;
-            // Visual feedback for hard rock
-            drillUnit.style.filter = 'sepia(1) saturate(5) hue-rotate(-50deg)';
-        } else {
-            drillUnit.style.filter = 'none';
         }
 
-        // Apply heat
-        if (speed > 0.1) {
+        // Apply heat & effects
+        if (speed > 0.05) {
             const coolingBonus = 1 - (gameState.upgrades.cooling * 0.15);
-            gameState.heat = Math.min(100, gameState.heat + (speed * 2 * heatMultiplier * coolingBonus));
+            gameState.heat = Math.min(100, gameState.heat + (speed * 2.5 * heatMultiplier * coolingBonus));
+            
+            // Visuals
             drillContainer.classList.add('drilling');
+            body.classList.add('shake-screen');
             createParticles(currentPos + window.innerHeight * 0.8, speed);
+            
+            // Audio
+            updateDrillSound(speed);
         } else {
-            gameState.heat = Math.max(0, gameState.heat - 1.0);
+            gameState.heat = Math.max(0, gameState.heat - 1.2);
             drillContainer.classList.remove('drilling');
+            body.classList.remove('shake-screen');
+            stopDrillSound();
         }
-
-        // Update points
-        if (currentPos > gameState.lastScrollPos) {
-            gameState.points += Math.floor(posDiff);
-            localStorage.setItem('scrollArch_points', gameState.points);
-        }
+    } else {
+        stopDrillSound();
+        body.classList.remove('shake-screen');
     }
 
     if (gameState.heat >= 100 && !gameState.isOverheated) {
         triggerOverheat();
     }
+
+    // Heat Glow Effect
+    drillHeatOverlay.style.fillOpacity = (gameState.heat / 100) * 0.6;
 
     gameState.depth = Math.floor(currentPos);
     gameState.lastScrollTime = currentTime;
@@ -159,25 +193,36 @@ function handleScroll() {
     updateHUD();
 }
 
+function updateDrillSound(speed) {
+    if (!drillGain || gameState.isMuted) return;
+    const freq = 50 + speed * 200;
+    const volume = Math.min(0.2, speed * 0.3);
+    drillOsc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
+    drillGain.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.05);
+}
+
+function stopDrillSound() {
+    if (!drillGain) return;
+    drillGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+}
+
 function createParticles(y, speed) {
-    const count = Math.floor(speed * 5);
+    const count = Math.floor(speed * 8);
     for (let i = 0; i < count; i++) {
         particles.push({
-            x: window.innerWidth / 2 + (Math.random() - 0.5) * 60,
+            x: window.innerWidth / 2 + (Math.random() - 0.5) * 80,
             y: y,
-            vx: (Math.random() - 0.5) * 10,
-            vy: -(Math.random() * 5 + 2),
+            vx: (Math.random() - 0.5) * 15,
+            vy: -(Math.random() * 8 + 3),
             life: 1.0,
-            color: Math.random() > 0.5 ? '#ffa726' : '#8d6e63',
-            size: Math.random() * 4 + 2
+            color: Math.random() > 0.3 ? '#ffca28' : '#e64a19',
+            size: Math.random() * 5 + 2
         });
     }
 }
 
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Only draw particles near the viewport for performance
     const viewTop = drillerSpace.scrollTop;
     const viewBottom = viewTop + window.innerHeight;
 
@@ -185,8 +230,8 @@ function gameLoop() {
     particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.2; // gravity
-        p.life -= 0.02;
+        p.vy += 0.3; 
+        p.life -= 0.025;
         
         if (p.y > viewTop && p.y < viewBottom) {
             ctx.globalAlpha = p.life;
@@ -204,10 +249,13 @@ function triggerOverheat() {
     gameState.isOverheated = true;
     overheatWarning.classList.remove('hidden');
     drillContainer.classList.remove('drilling');
+    stopDrillSound();
     
     let cooldown = setInterval(() => {
-        gameState.heat -= 3;
+        gameState.heat -= 4;
         updateHUD();
+        drillHeatOverlay.style.fillOpacity = (gameState.heat / 100) * 0.6;
+        
         if (gameState.heat <= 0) {
             clearInterval(cooldown);
             gameState.isOverheated = false;
@@ -220,8 +268,8 @@ function updateHUD() {
     depthValue.innerText = gameState.depth.toLocaleString();
     heatFill.style.width = `${gameState.heat}%`;
     
-    if (gameState.heat > 80) heatFill.style.background = '#f44336';
-    else if (gameState.heat > 50) heatFill.style.background = '#ff9800';
+    if (gameState.heat > 85) heatFill.style.background = '#f44336';
+    else if (gameState.heat > 55) heatFill.style.background = '#ff9800';
     else heatFill.style.background = '#4caf50';
 
     foundCount.innerText = gameState.foundItems.length;
@@ -230,14 +278,13 @@ function updateHUD() {
 function collectItem(item) {
     if (gameState.foundItems.includes(item.id)) return;
     
-    // Mini-game: Simple click accumulation as "cleaning"
     let cleanProgress = 0;
     const notificationMsg = notification.querySelector('.message');
     notificationMsg.innerText = "遺物を発見！タップでクリーニング中...";
     notification.classList.remove('hidden');
 
     const cleanHandler = () => {
-        cleanProgress += 10;
+        cleanProgress += 15;
         if (cleanProgress >= 100) {
             window.removeEventListener('click', cleanHandler);
             finishCollection(item);
@@ -248,15 +295,31 @@ function collectItem(item) {
 
 function finishCollection(item) {
     gameState.foundItems.push(item.id);
-    gameState.points += 5000; // Bonus points for artifacts
+    gameState.points += 5000;
     localStorage.setItem('scrollArch_found', JSON.stringify(gameState.foundItems));
     localStorage.setItem('scrollArch_points', gameState.points);
     
     notification.querySelector('.message').innerText = `${item.name} を入手！ (+5000 PTS)`;
-    setTimeout(() => notification.classList.add('hidden'), 3000);
+    setTimeout(() => notification.classList.add('hidden'), 3500);
     
     spawnArtifacts();
     updateHUD();
+    
+    // Play discovery sound if possible
+    playSfx(880, 0.2);
+}
+
+function playSfx(freq, duration) {
+    if (!audioCtx || gameState.isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
 }
 
 function renderCollection() {
@@ -306,6 +369,7 @@ window.buyUpgrade = (id, cost) => {
         localStorage.setItem('scrollArch_upgrades', JSON.stringify(gameState.upgrades));
         renderUpgrades();
         updateHUD();
+        playSfx(440, 0.1);
     }
 };
 
