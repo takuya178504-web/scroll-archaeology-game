@@ -1,19 +1,19 @@
 const ARTIFACTS = [
-    { id: 1, name: "Ancient T-Rex Tooth", depth: 1500, icon: "🦖", color: "#8d6e63" },
-    { id: 2, name: "Golden Roman Coin", depth: 5200, icon: "🪙", color: "#ffd700" },
-    { id: 3, name: "Rusty Knight Sword", depth: 12000, icon: "⚔️", color: "#757575" },
-    { id: 4, name: "Mystic Blue Crystal", depth: 25000, icon: "💎", color: "#00b0ff" },
-    { id: 5, name: "Ancient Stone Tablet", depth: 38000, icon: "📜", color: "#a1887f" },
-    { id: 6, name: "Cybernetic Robot Arm", depth: 55000, icon: "🦾", color: "#607d8b" },
-    { id: 7, name: "Rare Fossilized Egg", depth: 68000, icon: "🥚", color: "#d7ccc8" },
-    { id: 8, name: "Obsidian Dagger", depth: 75000, icon: "🔪", color: "#212121" },
-    { id: 9, name: "King's Lost Crown", depth: 88000, icon: "👑", color: "#ffab00" },
-    { id: 10, name: "Meteorite Core", depth: 98000, icon: "☄️", color: "#ff5252" }
+    { id: 1, name: "古代ティラノサウルスの牙", depth: 1500, icon: "🦖", color: "#8d6e63" },
+    { id: 2, name: "古代ローマの金貨", depth: 5200, icon: "🪙", color: "#ffd700" },
+    { id: 3, name: "錆びついた騎士の剣", depth: 12000, icon: "⚔️", color: "#757575" },
+    { id: 4, name: "神秘のこもった青水晶", depth: 25000, icon: "💎", color: "#00b0ff" },
+    { id: 5, name: "古代の石版", depth: 38000, icon: "📜", color: "#a1887f" },
+    { id: 6, name: "サイバネティクス・アーム", depth: 55000, icon: "🦾", color: "#607d8b" },
+    { id: 7, name: "希少な化石の卵", depth: 68000, icon: "🥚", color: "#d7ccc8" },
+    { id: 8, name: "黒曜石の短剣", depth: 75000, icon: "🔪", color: "#212121" },
+    { id: 9, name: "失われた王冠", depth: 88000, icon: "👑", color: "#ffab00" },
+    { id: 10, name: "隕石の核", depth: 98000, icon: "☄️", color: "#ff5252" }
 ];
 
 const UPGRADES = [
-    { id: 'cooling', name: 'Advanced Cooling', desc: 'Reduce heat gain by 20%', cost: 1000, level: 0, max: 5 },
-    { id: 'power', name: 'Diamond Bit', desc: 'Better performance in hard rock', cost: 2000, level: 0, max: 3 }
+    { id: 'cooling', name: '高性能冷却システム', desc: 'ドリルの発熱を15%抑制します', cost: 1000, level: 0, max: 5 },
+    { id: 'power', name: '強化ダイヤモンドビット', desc: '硬い岩板での作業効率をアップします', cost: 2000, level: 0, max: 3 }
 ];
 
 let gameState = {
@@ -233,7 +233,7 @@ function collectItem(item) {
     // Mini-game: Simple click accumulation as "cleaning"
     let cleanProgress = 0;
     const notificationMsg = notification.querySelector('.message');
-    notificationMsg.innerText = "CLEANING ARTIFACT... TAP FAST!";
+    notificationMsg.innerText = "遺物を発見！タップでクリーニング中...";
     notification.classList.remove('hidden');
 
     const cleanHandler = () => {
@@ -252,7 +252,7 @@ function finishCollection(item) {
     localStorage.setItem('scrollArch_found', JSON.stringify(gameState.foundItems));
     localStorage.setItem('scrollArch_points', gameState.points);
     
-    notification.querySelector('.message').innerText = `DISCOVERED: ${item.name}! (+5000 PTS)`;
+    notification.querySelector('.message').innerText = `${item.name} を入手！ (+5000 PTS)`;
     setTimeout(() => notification.classList.add('hidden'), 3000);
     
     spawnArtifacts();
@@ -267,15 +267,15 @@ function renderCollection() {
         div.className = `collection-item ${isFound ? '' : 'locked'}`;
         div.innerHTML = `
             <div style="font-size: 40px; margin-bottom: 10px;">${isFound ? item.icon : '❓'}</div>
-            <h3>${isFound ? item.name : 'Unknown'}</h3>
-            <p style="font-size: 10px; color: rgba(255,255,255,0.5);">${isFound ? item.depth + 'm' : '???'}</p>
+            <h3>${isFound ? item.name : '？？？'}</h3>
+            <p style="font-size: 10px; color: rgba(255,255,255,0.5);">${isFound ? item.depth + 'm' : '深度不明'}</p>
         `;
         artifactsGrid.appendChild(div);
     });
 }
 
 function renderUpgrades() {
-    upgradesList.innerHTML = `<div style="text-align:center; margin-bottom:15px; font-weight:800;">TOTAL POINTS: ${gameState.points.toLocaleString()}</div>`;
+    upgradesList.innerHTML = `<div style="text-align:center; margin-bottom:15px; font-weight:800;">所持ポイント: ${gameState.points.toLocaleString()} PTS</div>`;
     
     UPGRADES.forEach(upg => {
         const currentLevel = gameState.upgrades[upg.id];
@@ -291,7 +291,7 @@ function renderUpgrades() {
                 <p style="font-size: 10px; color: rgba(255,255,255,0.6);">${upg.desc}</p>
             </div>
             <button ${ (isMax || !canAfford) ? 'disabled' : '' } onclick="buyUpgrade('${upg.id}', ${cost})">
-                ${ isMax ? 'MAX' : cost + ' PTS' }
+                ${ isMax ? '最大強化' : cost + ' PTS' }
             </button>
         `;
         upgradesList.appendChild(div);
