@@ -32,12 +32,19 @@ body, html {
     position: relative;
 }
 
-/* Driller Space - The scrollable area */
+#vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 100;
+}
+
 #driller-space {
     width: 100%;
     height: 100%;
     overflow-y: scroll;
-    scrollbar-width: none; /* Hide scrollbar Firefox */
+    scrollbar-width: none;
     position: relative;
     z-index: 1;
 }
@@ -145,6 +152,35 @@ body, html {
 
 .timer-container {
     border: 1px solid rgba(255, 152, 0, 0.4);
+}
+
+.hud-center {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.progress-container {
+    padding: 5px 15px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.progress-bar {
+    width: 100px;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+#progress-fill {
+    width: 0%;
+    height: 100%;
+    background: #00e5ff;
+    box-shadow: 0 0 10px #00e5ff;
 }
 
 #timer-value {
@@ -395,43 +431,85 @@ body, html {
 #intro-screen {
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0.8);
-    z-index: 200;
+    background: linear-gradient(135deg, #000, #1a1a1a);
+    z-index: 500;
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 20px;
-    text-align: center;
 }
 
-.intro-card {
+.title-card {
+    width: 95%;
+    max-width: 800px;
     padding: 40px;
-    border-radius: 24px;
-    max-width: 400px;
+    border-radius: 32px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    box-shadow: 0 0 50px rgba(0,0,0,1);
 }
 
-.intro-card h1 {
-    font-size: 32px;
-    font-weight: 800;
-    margin-bottom: 20px;
+.title-left, .title-right {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
-.intro-card p {
+.main-logo {
+    font-size: 64px;
+    font-weight: 900;
+    background: linear-gradient(to bottom, #fff9c4, #fbc02d);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(251,192,45,0.4);
+    margin-bottom: 5px;
+    animation: float 3s infinite ease-in-out;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.tagline {
     font-size: 16px;
-    line-height: 1.6;
-    margin-bottom: 30px;
-    color: rgba(255,255,255,0.8);
+    opacity: 0.6;
+    margin-bottom: 40px;
+    letter-spacing: 0.1em;
 }
 
-#start-btn {
-    background: white;
-    color: black;
-    border: none;
-    padding: 15px 40px;
-    border-radius: 40px;
-    font-weight: 800;
-    font-size: 18px;
-    cursor: pointer;
+.rank-mini h3 {
+    font-size: 14px;
+    color: #ff9800;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 5px;
+}
+
+#menu-leaderboard {
+    list-style: none;
+    font-size: 14px;
+}
+
+#menu-leaderboard li {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    justify-content: space-between;
+}
+
+.pulse {
+    animation: pulseAnim 2s infinite;
+}
+
+@keyframes pulseAnim {
+    0% { transform: scale(1); box-shadow: 0 0 0 rgba(251,192,45,0); }
+    50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(251,192,45,0.3); }
+    100% { transform: scale(1); box-shadow: 0 0 0 rgba(251,192,45,0); }
 }
 
 .modal {
@@ -606,6 +684,37 @@ body, html {
     to { transform: scale(3); opacity: 0; }
 }
 
-.mole {
-    transition: left 0.05s linear;
+.obstacle.mole {
+    font-size: 50px;
+}
+
+.mole-anim {
+    transition: left 0.1s linear;
+}
+
+@keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+#notification {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    padding: 12px 30px;
+    border-radius: 30px;
+    font-weight: 800;
+    z-index: 600;
+    animation: slideUp 0.3s ease-out;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+@keyframes slideUp {
+    from { transform: translate(-50%, 50px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
 }

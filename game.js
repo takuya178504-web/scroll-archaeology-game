@@ -36,6 +36,7 @@ const drillerSpace = document.getElementById('driller-space');
 const timerValue = document.getElementById('timer-value');
 const depthValue = document.getElementById('depth-value');
 const heatFill = document.getElementById('heat-fill');
+const progressFill = document.getElementById('progress-fill');
 const artifactContainer = document.getElementById('artifact-container');
 const veinContainer = document.getElementById('vein-container');
 const introScreen = document.getElementById('intro-screen');
@@ -43,6 +44,7 @@ const startBtn = document.getElementById('start-btn');
 const soundToggle = document.getElementById('sound-toggle');
 const gameoverModal = document.getElementById('gameover-modal');
 const leaderboardList = document.getElementById('leaderboard-list');
+const menuLeaderboard = document.getElementById('menu-leaderboard');
 const restartBtn = document.getElementById('restart-btn');
 const drillUnit = document.getElementById('drill-unit');
 const drillHeatOverlay = document.getElementById('drill-heat-overlay');
@@ -58,23 +60,36 @@ function init() {
     resizeCanvas();
     spawnObstacles();
     updateHUD();
-    renderLeaderboard();
+    renderLeaderboards();
 
     window.addEventListener('resize', resizeCanvas);
-    startBtn.addEventListener('click', startGame);
-    restartBtn.addEventListener('click', () => location.reload());
-    soundToggle.addEventListener('click', toggleMute);
     
+    // Explicitly attach click listeners to avoid any resolution issues
+    if (startBtn) {
+        startBtn.onclick = (e) => {
+            e.preventDefault();
+            startGame();
+        };
+    }
+    
+    if (restartBtn) {
+        restartBtn.onclick = () => location.reload();
+    }
+    
+    soundToggle.addEventListener('click', toggleMute);
     drillerSpace.addEventListener('scroll', handleScroll);
+    
     requestAnimationFrame(gameLoop);
 }
 
 function startGame() {
+    console.log("Starting Game...");
     introScreen.classList.add('hidden');
     gameState.isGameActive = true;
     initAudio();
     spawnCheckpoint(CHECKPOINT_INTERVAL);
     
+    if (gameTimer) clearInterval(gameTimer);
     gameTimer = setInterval(() => {
         if (!gameState.isGameActive) return;
         gameState.timeLeft--;
@@ -96,7 +111,7 @@ function endGame() {
 
     document.getElementById('final-depth').innerText = gameState.depth;
     document.getElementById('final-artifacts').innerText = gameState.foundCount;
-    renderLeaderboard();
+    renderLeaderboards();
     gameoverModal.classList.remove('hidden');
 }
 
@@ -135,8 +150,6 @@ function handleScroll() {
     }
 
     if (gameState.heat >= 100) triggerOverheat();
-
-    // Mole Collision Detection
     checkMoleCollision(currentPos);
 
     gameState.depth = Math.floor(currentPos);
@@ -149,9 +162,7 @@ function checkMoleCollision(depth) {
     const drillY = depth + window.innerHeight * 0.8;
     gameState.moles.forEach(mole => {
         const distY = Math.abs(drillY - mole.y);
-        const drillX = 50; // Drill is centered at 50%
-        const distX = Math.abs(drillX - mole.x);
-        
+        const distX = Math.abs(50 - mole.x);
         if (distY < 60 && distX < 10 && !gameState.isStunned) {
             triggerStun("🐹 モグラに突撃された！オーバーヒート！");
         }
@@ -160,9 +171,8 @@ function checkMoleCollision(depth) {
 
 function triggerStun(msg) {
     gameState.isStunned = true;
-    gameState.heat = 100; // Force overheat
+    gameState.heat = 100;
     showNotification(msg);
-    drillUnit.style.transition = "transform 0.1s";
     let stunAnim = setInterval(() => {
         drillUnit.style.transform = `rotate(${Math.random() * 20 - 10}deg)`;
     }, 50);
@@ -179,7 +189,6 @@ function triggerOverheat() {
     gameState.isOverheated = true;
     stopDrillSound();
     if (!gameState.isStunned) showNotification("オーバーヒート！3秒間停止！");
-    
     setTimeout(() => {
         gameState.heat = 0;
         gameState.isOverheated = false;
@@ -196,7 +205,7 @@ function spawnCheckpoint(depth) {
     spot.style.transform = `translateX(-50%)`;
     spot.innerHTML = `<span class="gift-box" style="font-size:60px;">📦</span><div style="font-size:12px; font-weight:800;">CHECKPOINT</div>`;
     
-    spot.addEventListener('click', () => {
+    spot.onclick = () => {
         let count = 0;
         spot.innerHTML = `🔨`;
         const interval = setInterval(() => {
@@ -207,7 +216,7 @@ function spawnCheckpoint(depth) {
                 clearCheckpoint(spot, item);
             }
         }, 100);
-    });
+    };
     artifactContainer.appendChild(spot);
 }
 
@@ -225,8 +234,6 @@ function clearCheckpoint(node, item) {
 function spawnObstacles() {
     veinContainer.innerHTML = '';
     gameState.moles = [];
-    
-    // Boulders
     for (let i = 0; i < 50; i++) {
         const depth = 1000 + (Math.random() * 95000);
         const boulder = document.createElement('div');
@@ -235,30 +242,25 @@ function spawnObstacles() {
         boulder.style.left = `${10 + Math.random() * 80}%`;
         boulder.innerHTML = '🪨';
         let hp = 3;
-        boulder.addEventListener('click', () => {
+        boulder.onclick = () => {
             hp--;
             if (hp <= 0) {
                 boulder.classList.add('broken');
                 setTimeout(() => boulder.remove(), 300);
             }
-        });
+        };
         veinContainer.appendChild(boulder);
     }
-
-    // Moles (Hamlet enemies)
     for (let i = 0; i < 20; i++) {
         const depth = 5000 + (Math.random() * 90000);
         const moleNode = document.createElement('div');
         moleNode.className = 'obstacle mole mole-anim';
         moleNode.style.top = `${depth}px`;
         moleNode.innerHTML = '🐹';
-        
         const moleObj = { y: depth, x: Math.random() * 80 + 10, dir: Math.random() > 0.5 ? 1 : -1, node: moleNode };
         gameState.moles.push(moleObj);
         veinContainer.appendChild(moleNode);
     }
-
-    // Power Ups
     for (let i = 0; i < 30; i++) {
         const depth = 2000 + (Math.random() * 90000);
         const part = document.createElement('div');
@@ -267,12 +269,12 @@ function spawnObstacles() {
         part.style.left = `${10 + Math.random() * 80}%`;
         const type = Math.random() > 0.5 ? 'power' : 'cooling';
         part.innerHTML = type === 'power' ? '⚡' : '❄️';
-        part.addEventListener('click', () => {
+        part.onclick = () => {
             gameState.upgrades[type]++;
             showNotification(`ドリル強化：${type === 'power' ? 'パワー' : '冷却'} Lv.${gameState.upgrades[type]}`);
             updateHUD();
             part.remove();
-        });
+        };
         artifactContainer.appendChild(part);
     }
 }
@@ -282,7 +284,6 @@ function gameLoop() {
     const viewTop = drillerSpace.scrollTop;
     const viewBottom = viewTop + window.innerHeight;
 
-    // Move Moles
     if (gameState.isGameActive) {
         gameState.moles.forEach(mole => {
             mole.x += mole.dir * 0.8;
@@ -290,9 +291,13 @@ function gameLoop() {
             mole.node.style.left = `${mole.x}%`;
             mole.node.style.transform = `scaleX(${mole.dir > 0 ? -1 : 1})`;
         });
+    } else {
+        // Decorative particles for title
+        if (Math.random() > 0.95) {
+            createParticles(viewTop + Math.random() * window.innerHeight, 0.1);
+        }
     }
 
-    // Particles
     particles = particles.filter(p => p.life > 0);
     particles.forEach(p => {
         p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.life -= 0.03;
@@ -311,18 +316,27 @@ function updateHUD() {
     drillHeatOverlay.style.fillOpacity = (gameState.heat / 100) * 0.8;
     timerValue.style.color = gameState.timeLeft < 20 ? '#f44336' : '#ff9800';
 
+    // Progress to next checkpoint
+    const currentBase = gameState.maxUnlockedDepth - CHECKPOINT_INTERVAL;
+    const progress = ((gameState.depth - currentBase) / CHECKPOINT_INTERVAL) * 100;
+    progressFill.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+
     const totalLevel = gameState.upgrades.cooling + gameState.upgrades.power;
     drillUnit.classList.toggle('evo-2', totalLevel >= 5);
     drillUnit.classList.toggle('evo-3', totalLevel >= 10);
 }
 
-function renderLeaderboard() {
-    leaderboardList.innerHTML = '';
-    gameState.ranking.forEach((entry, i) => {
-        const li = document.createElement('li');
-        li.innerHTML = `<span>${i+1}. ${entry.depth}m</span> <span>${entry.date}</span>`;
-        leaderboardList.appendChild(li);
-    });
+function renderLeaderboards() {
+    const render = (list, data) => {
+        list.innerHTML = data.length ? '' : '<li>記録なし</li>';
+        data.forEach((entry, i) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${i+1}. ${entry.depth}m</span> <span>${entry.date}</span>`;
+            list.appendChild(li);
+        });
+    };
+    if (leaderboardList) render(leaderboardList, gameState.ranking);
+    if (menuLeaderboard) render(menuLeaderboard, gameState.ranking);
 }
 
 function showNotification(msg) {
@@ -331,7 +345,6 @@ function showNotification(msg) {
     setTimeout(() => notification.classList.add('hidden'), 3000);
 }
 
-// Audio
 function initAudio() {
     if (audioCtx) return;
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();

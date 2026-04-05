@@ -19,6 +19,7 @@
             <div id="artifact-container"></div>
             <!-- Canvas for sparks and dust -->
             <canvas id="particle-canvas"></canvas>
+            <div id="vignette"></div>
         </div>
 
         <!-- Audio Toggle -->
@@ -71,6 +72,15 @@
                 </div>
             </div>
             
+            <div class="hud-center">
+                <div class="progress-container glass">
+                    <span class="label">次まで</span>
+                    <div class="progress-bar">
+                        <div id="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="hud-bottom">
                 <div id="item-slots">
                     <div id="slot-cool" class="item-icon empty" title="冷却スプレー">❄️</div>
@@ -102,12 +112,24 @@
             </div>
         </div>
 
-        <!-- Intro -->
+        <!-- Intro / Title Screen -->
         <div id="intro-screen">
-            <div class="glass intro-card">
-                <h1>巻物考古学</h1>
-                <p>画面をスクロールして地底を掘り進もう！<br>速すぎるとオーバーヒートしてしまいます。<br>地球の中心に眠る10個の遺物を探し出そう。</p>
-                <button id="start-btn">採掘を開始する</button>
+            <div class="glass title-card">
+                <div class="title-left">
+                    <div class="logo-container">
+                        <h1 class="main-logo">巻物考古学</h1>
+                        <p class="tagline">地底の秘宝を最速で掘り当てろ！</p>
+                    </div>
+                    <button id="start-btn" class="primary-btn pulse">採掘を開始する</button>
+                </div>
+                <div class="title-right">
+                    <div class="rank-mini">
+                        <h3>🏆 地底最速ランキング</h3>
+                        <ul id="menu-leaderboard">
+                            <!-- JSで生成 -->
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
 
